@@ -42,13 +42,13 @@ python -c "import gymnasium; import stable_baselines3; import tensorboard; print
 Once the environment is set up and dependencies are installed, you can proceed to train the agent and evaluate its performance.
 
 ### Project Structure
-- `bipedal_train.py`: Script to train the PPO agent.
-- `bipedal_eval.py`: Script to evaluate the trained PPO agent.
+- `bipedal_train.py`: Script to train the agent.
+- `bipedal_eval.py`: Script to evaluate the trained agent.
 
 ### Tensorboard Visualization
 
 ```sh
-tensorboard --logdir=logs
+tensorboard --logdir=./training/logs
 ```
 
 ### Additional Information

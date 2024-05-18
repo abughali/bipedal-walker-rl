@@ -26,7 +26,7 @@ print(env.action_space.sample())
 # Actions are motor speed values in the [-1, 1] range for each of the
 # 4 joints at both hips and knees.
 
-#  |-----| (body)
+#  |-----| (body or hull)
 #  |-----| \ (lidar rangefinder)
 #   O   O  (hip joints)
 #    \   \

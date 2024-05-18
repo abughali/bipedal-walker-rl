@@ -17,6 +17,8 @@ env = make_vec_env(environment_name, env_kwargs={"hardcore": False, "render_mode
 model_path = os.path.join('training', 'saved_models', 'best_model')
 model = PPO.load(model_path, env=env)
 
-evaluate_policy(model, env, n_eval_episodes=5, render=True)
+# Evaluate the trained model
+mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=5, render=True)
+print(f"Mean reward: {mean_reward} ± {std_reward}")
 
 env.close()
