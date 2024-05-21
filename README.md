@@ -1,8 +1,18 @@
 # Bipedal Walker
 
-This is how to teach bot to walk on two feet.
+This is how to teach a bot to walk on two feet.
 
 Bipedal Walker is an [OpenAI Gym](https://gymnasium.farama.org/environments/box2d/bipedal_walker/) environment where an agent learns to control a bipedal 2D character to reach the end of an obstacle course. What makes this challenging is that the agent only receives limbs coordinates along with the Lidar information. The agent has to learn to balance, walk, run, jump on its own without any human intervention.
+
+There are two versions:
+
+- Normal, with slightly uneven terrain.
+
+- Hardcore, with ladders, stumps, pitfalls.
+
+To solve the normal version, you need to get 300 points in 1600 time steps. To solve the hardcore version, you need 300 points in 2000 time steps.
+
+The code in this repo solves Bipedal Walker V3 in normal mode (`hardcore=False`).
 
 ## Prerequisites and Recommended Tools
 
@@ -28,22 +38,21 @@ conda activate gym-env
 
 ##### 3.  Install the required packages
 ```sh
-conda install swig gymnasium-box2d stable-baselines3 tensorboard -y
+conda install swig gymnasium-box2d stable-baselines3 tensorboard plotly scikit-learn optuna -y
 ```
 
-##### 4. Verify the Installation
-To ensure that everything is set up correctly, run a quick test to check the installed packages:
-```sh
-python -c "import gymnasium; import stable_baselines3; import tensorboard; print('All packages installed successfully!')"
-```
 
 ##### 5. Clone this github repository.
 
 Once the environment is set up and dependencies are installed, you can proceed to train the agent and evaluate its performance.
 
 ### Project Structure
-- `bipedal_train.py`: Script to train the agent.
-- `bipedal_eval.py`: Script to evaluate the trained agent.
+- `bipedal_train.py`: Train the agent with PPO default parameters.
+- `bipedal_eval.py`: Evaluate the trained agent.
+- `optuna_ppo.py`: Auto-tune PPO using [OPTUNA](https://optuna.org/).
+- `bipedal_wandb.py`: Train / evaluate the agent with tuned hyper-parameters + [W&B](https://wandb.ai/) integration.
+
+
 
 ### Tensorboard Visualization
 
