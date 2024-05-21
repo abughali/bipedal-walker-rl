@@ -1,0 +1,8 @@
+logs/**
+runs/*
+videos/*
+wandb/*
+models/*
+./vscode/*
+.DS_Store
+
