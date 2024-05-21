@@ -42,7 +42,7 @@ conda install swig gymnasium-box2d stable-baselines3 tensorboard plotly scikit-l
 ```
 
 
-##### 5. Clone this github repository.
+##### 4. Clone this github repository.
 
 Once the environment is set up and dependencies are installed, you can proceed to train the agent and evaluate its performance.
 
