@@ -6,11 +6,9 @@ warnings.filterwarnings("ignore", message="Your system is avx2 capable but pygam
 
 import os
 import wandb
-# import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.monitor import Monitor
 
 gym.envs.register(
      id='NewEnvBipedal-v4',
@@ -20,9 +18,7 @@ gym.envs.register(
 )
 
 def make_env():
-    # env = BipedalWalker(hardcore=False)
     env = gym.make("NewEnvBipedal-v4")
-    # env = Monitor(env)
     return env
 
 
@@ -31,8 +27,7 @@ def make_env():
 from wandb.integration.sb3 import WandbCallback
 from stable_baselines3.common.callbacks import (
     EvalCallback,
-    StopTrainingOnRewardThreshold,
-    StopTrainingOnNoModelImprovement,
+    StopTrainingOnRewardThreshold
 )
 
 
@@ -61,7 +56,7 @@ run = wandb.init(
     config=config,
     sync_tensorboard=True,
     monitor_gym=True,
-    name="sam_PPO_" + SUFFIX + "_custom",
+    name="sam_PPO_" + SUFFIX + "_custom_8e-1",
     save_code=True,
 )
 

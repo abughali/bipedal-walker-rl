@@ -31,8 +31,8 @@ FPS = 50
 SCALE = 30.0  # affects how fast-paced the game is, forces should be adjusted as well
 
 MOTORS_TORQUE = 80
-SPEED_HIP = 4  # default value: 4
-SPEED_KNEE = 6  # default value: 6
+SPEED_HIP = 8  # default value: 4
+SPEED_KNEE = 12  # default value: 6
 LIDAR_RANGE = 160 / SCALE
 
 INITIAL_RANDOM = 5
@@ -575,12 +575,15 @@ class BipedalWalker(gym.Env, EzPickle):
 
         # reward will be given to velocity
         # reward += vel.x * 0.8
+        print("linear velocity right now:")
+        print(vel.x)
 
         terminated = False
         if self.game_over or pos[0] < 0:
             reward = -100
             terminated = True
         if pos[0] > (TERRAIN_LENGTH - TERRAIN_GRASS) * TERRAIN_STEP:
+            print("terminated here")
             terminated = True
 
         if self.render_mode == "human":
