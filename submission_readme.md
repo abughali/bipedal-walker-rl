@@ -53,35 +53,46 @@ conda install \
 - `bipedal_wandb_ddpg.py`: Train / evaluate the agent with tuned hyper-parameters + [W&B](https://wandb.ai/) integration.
 - `record_video.py`: Record a video of the trained agent.
 
-###
 
-##### 4. Train the PPO model using customized environment with new angular velocity configs and new reward scheme
-New environment customized using different parameters is saved in ```/custom_env/bipedal_walker.py```.
+### Tensorboard Visualization
 
-For new angular velocity at joints and hip, changes were made at line 34 and 35 
+```sh
+tensorboard --logdir=./training/logs
+```
+
+# Custom Environment
+
+The code for our customized environment can be found in the `modified_env` folder as a separate implementation.
+
+### Description of changes:
+
+1. For new angular velocity at joints and hip, changes were made at line 34 and 35. The source code of this environment can be in `/modified_env/custom_env/bipedal_walker_angular.py`
 ```python
 SPEED_HIP = 8  # default value: 4
 SPEED_KNEE = 12  # default value: 6
 ```
+To use this environment for training, you can run:
+```
+python ./modified_env/bipedal_custom_angular.py
+```
+To use this environment for evaluation, you can run:
+```
+python ./modified_env/eval_angular.py
+```
 
-For new reward scheme, new equation was added 575
+2. For new reward scheme, new equation was added at line 575. The source code of this environment is in `/modified_env/custom_env/bipedal_walker_vel.py`
 ```python
 # reward will be given to velocity
 if vel.x > 5.0:
     # normalize it to scale[-1, 1]
     reward += 0.08 * 0.3 * vel.x * (VIEWPORT_W / SCALE) / FPS  
 ```
+To use this environment for training, you can run:
 ```
-python3 bipedal_custom.py
-```
-After the training, to evaluate model's performance run:
-```
-python3 bipedal_eval_custom.py
+python ./modified_env/bipedal_custom_vel.py
 ```
 
-
-### Tensorboard Visualization
-
-```sh
-tensorboard --logdir=./training/logs
+To use this environment for evaluation, you can run:
+```
+python ./modified_env/eval_vel.py
 ```
