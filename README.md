@@ -48,9 +48,13 @@ Once the environment is set up and dependencies are installed, you can proceed t
 
 ### Project Structure
 - `bipedal_train.py`: Train the agent with PPO default parameters.
-- `bipedal_eval.py`: Evaluate the trained agent.
+- `bipedal_eval.py`: Evaluate the agent using a previously saved model.
 - `optuna_ppo.py`: Auto-tune PPO using [OPTUNA](https://optuna.org/).
-- `bipedal_wandb.py`: Train / evaluate the agent with tuned hyper-parameters + [W&B](https://wandb.ai/) integration.
+- `optuna_ddpg.py`: Auto-tune DDPG using [OPTUNA](https://optuna.org/).
+- `bipedal_wandb_ppo.py`: Train / evaluate the agent with tuned hyper-parameters + [W&B](https://wandb.ai/) integration.
+- `bipedal_wandb_ddpg.py`: Train / evaluate the agent with tuned hyper-parameters + [W&B](https://wandb.ai/) integration.
+- `record_video.py`: Record a video of the trained agent.
+
 
 
 
