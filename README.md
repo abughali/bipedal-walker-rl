@@ -38,9 +38,11 @@ conda activate gym-env
 
 ##### 3.  Install the required packages
 ```sh
-conda install swig gymnasium-box2d stable-baselines3 tensorboard plotly scikit-learn optuna -y
+conda install \
+    swig gymnasium-box2d \
+    stable-baselines3 tensorboard \
+    plotly scikit-learn optuna -y
 ```
-
 
 ##### 4. Clone this github repository.
 
