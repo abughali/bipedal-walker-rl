@@ -45,7 +45,7 @@ print(env.observation_space.sample())
 #  we use 5.0 to represent the joints moving at maximum
 #  5 x the rated speed due to impulses from ground contact etc.
 
-
+# Random actions
 # Run n episode(s)
 episodes = 0
 for episode in range(1, episodes+1):
@@ -89,7 +89,7 @@ eval_callback = EvalCallback(env,
 model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_path)
 
 # Train the PPO model
-model.learn(total_timesteps=1000000, callback=eval_callback)
+model.learn(total_timesteps=500_000, callback=eval_callback)
 
 # Save the trained model
 model.save("ppo_bipedalwalker")

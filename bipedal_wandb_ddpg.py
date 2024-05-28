@@ -6,7 +6,9 @@ warnings.filterwarnings("ignore", message="Your system is avx2 capable but pygam
 import os
 import wandb
 import gymnasium as gym
-from stable_baselines3 import PPO
+import numpy as np
+from stable_baselines3.ddpg import DDPG
+from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
@@ -19,16 +21,13 @@ environment_name = "BipedalWalker-v3"
 # tuned hyperparamters
 config = {
     'policy': 'MlpPolicy',
-    'n_steps': 1503, 
-    'batch_size': 32, 
-    'gamma': 0.9606344595370512, 
-    'learning_rate': 0.0004803031415590949, 
-    'ent_coef': 5.2492091292781885e-06, 
-    'clip_range': 0.19171786835210225, 
-    'n_epochs': 2, 
-    'gae_lambda': 0.8571941809479062, 
-    'max_grad_norm': 2.372533951435877, 
-    'vf_coef': 0.39445800472492965
+    'buffer_size': 200000, 
+    'batch_size': 256,
+    'gamma': 0.98, 
+    'learning_rate': 0.0001, 
+    'learning_starts': 10000, 
+    'gradient_steps': -1,
+    'train_freq': (1, 'episode')
 }
 
 run = wandb.init(
@@ -51,37 +50,35 @@ env = DummyVecEnv([make_env])
 #env = VecVideoRecorder(env, f"videos/{run.id}", record_video_trigger=lambda x: x % 200 == 0, video_length=1000)
 
 # Define the policy_kwargs to specify the network architecture
-policy_kwargs = {
-    "net_arch": {
-        "pi": [256, 256],
-        "vf": [256, 256],
-    },
-    "activation_fn": th.nn.ReLU
-}
+policy_kwargs = dict(net_arch=[512, 256])
 
-# Create the PPO model
-model = PPO(
+n_actions = env.action_space.shape[-1]
+action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+
+# Create the DDPG model
+model = DDPG(
     env=env, 
     verbose=1, 
     tensorboard_log=f"runs/{run.id}",
+    **config,
     policy_kwargs=policy_kwargs,
-    **config
+    action_noise=action_noise
 )
 
 # Callback to stop training once reward threshold is reached
-callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=350, verbose=1)
+callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=310, verbose=1)
 
 
 # Use deterministic actions for evaluation
 eval_callback = EvalCallback(env, 
-                             callback_on_new_best=callback_on_best, 
+                          #   callback_on_new_best=callback_on_best, 
                              eval_freq=2000,
                              deterministic=True, 
                              best_model_save_path='./logs/', 
                              verbose=1)
 
 model.learn(
-            total_timesteps=500000,
+            total_timesteps=500_000,
             callback=[WandbCallback(
                         gradient_save_freq=1000,
                         model_save_path=f"models/{run.id}",
@@ -90,7 +87,7 @@ model.learn(
         )
 
 
-PPO_path = os.path.join('training', 'saved_models', 'PPO_BipedalWalker_final')
+PPO_path = os.path.join('training', 'saved_models', 'DDPG_BipedalWalker')
 model.save(PPO_path)
 
 mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10)

@@ -3,21 +3,19 @@ import warnings
 # Suppress AVX2 warning
 warnings.filterwarnings("ignore", message="Your system is avx2 capable but pygame was not built with support for it")
 
-from typing import Any, Dict,Optional
+from typing import Optional
 import gymnasium as gym
 import optuna
 import optuna.visualization as vis
 from optuna.pruners import MedianPruner
 from optuna.samplers import TPESampler
-from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import (BaseCallback,
-                                                EvalCallback, 
-                                                StopTrainingOnNoModelImprovement,
-                                                StopTrainingOnRewardThreshold)
+from stable_baselines3.ddpg import DDPG
+from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 from stable_baselines3.common.monitor import Monitor
 import torch
-import torch.nn as nn
+from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 import os
+import numpy as np
 
 N_TRIALS = 8
 N_STARTUP_TRIALS = 5
@@ -26,7 +24,7 @@ N_TIMESTEPS = 150_000
 EVAL_FREQ = N_TIMESTEPS // N_EVALUATIONS
 N_EVAL_EPISODES = 5
 N_JOBS = 8
-STUDY_PATH = "optuna/study/ppo"
+STUDY_PATH = "optuna/study/ddpg"
 
 ENV_ID = "BipedalWalker-v3"
 
@@ -44,66 +42,44 @@ def linear_schedule(initial_value):
     return func
 
 # Function to sample hyperparameters
-def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
+def sample_ddpg_params(trial, n_actions):
 
-    batch_size = trial.suggest_categorical("batch_size", [8, 16, 32, 64, 128, 256, 512, 1024, 2048])
-    n_steps = trial.suggest_categorical("n_steps", [8, 16, 32, 64, 128, 256, 512, 1024, 2048])
+    gamma = trial.suggest_float('gamma', 0.9, 0.9999, log=True)
+    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
+    batch_size = trial.suggest_categorical("batch_size", [16, 32, 64, 100, 128, 256, 512])
+    buffer_size = trial.suggest_categorical("buffer_size", [int(1e4), int(1e5), int(1e6)])
+    # Polyak coeff
+    tau = trial.suggest_categorical("tau", [0.001, 0.005, 0.01, 0.02, 0.05, 0.08])
+    train_freq = trial.suggest_categorical("train_freq", [1, 4, 8, 16, 32, 64, 128])
+    gradient_steps = train_freq
 
-    gamma = trial.suggest_categorical("gamma", [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999])
-    #gamma = trial.suggest_float('gamma', 0.9, 0.9999, log=True)
+    noise_type = trial.suggest_categorical( "noise_type", ["ornstein-uhlenbeck", "normal", None])
+    noise_std = trial.suggest_float("noise_std", 0, 1, )
 
-    learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True)
-    lr_schedule = trial.suggest_categorical('lr_schedule', ['linear', 'constant'])
-    ent_coef = trial.suggest_float("ent_coef", 0.0000001, 0.1, log=True)
-    clip_range = trial.suggest_float('clip_range', 0.1, 0.3, log=True)
-    n_epochs = trial.suggest_int('n_epochs', 1, 10)
+    net_arch_type = trial.suggest_categorical("net_arch", ["small", "medium", "big"])
+    net_arch = {"small": [64, 64], "medium": [256, 256], "big": [512, 512]}[net_arch_type]
 
-    gae_lambda = trial.suggest_categorical("gae_lambda", [0.8, 0.9, 0.92, 0.95, 0.98, 0.99, 1.0] )
-    #gae_lambda = trial.suggest_float('gae_lambda', 0.8, 1.0, log=True)
-
-    max_grad_norm = trial.suggest_categorical( "max_grad_norm", [0.3, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2, 5])
-    #max_grad_norm = trial.suggest_float('max_grad_norm', 0.3, 5.0, log=True)
-
-    vf_coef = trial.suggest_float("vf_coef", 0.0001, 1, log=True)
-    ortho_init = trial.suggest_categorical('ortho_init', [False, True])
-    activation_fn = trial.suggest_categorical('activation_fn', ['tanh', 'relu'])
-    normalize_advantage = trial.suggest_categorical("normalize_advantage", [False, True])
-
-    # suppress truncated mini-batch warning
-    if batch_size > n_steps:
-        batch_size = n_steps
-        trial.set_user_attr("batch_size_", batch_size)
-
-
-    if lr_schedule == "linear":
-        learning_rate = linear_schedule(learning_rate)
-
-    # Map net_arch to architecture
-    net_arch_width = trial.suggest_categorical("net_arch_width", [64, 128, 256, 512])
-    net_arch_depth = trial.suggest_int("net_arch_depth", 1, 3)
-    net_arch = dict(pi=[net_arch_width] * net_arch_depth, vf=[net_arch_width] * net_arch_depth)
-
-    # Map activation_fn to torch functions
-    activation_fn = {"tanh": nn.Tanh, "relu": nn.ReLU}[activation_fn]
-
-    return {
-        "n_steps": n_steps,
-        "batch_size": batch_size,
+    hyperparams = {
         "gamma": gamma,
+        "tau": tau,
         "learning_rate": learning_rate,
-        "normalize_advantage": normalize_advantage,
-        "ent_coef": ent_coef,
-        "clip_range": clip_range,
-        "n_epochs": n_epochs,
-        "gae_lambda": gae_lambda,
-        "max_grad_norm": max_grad_norm,
-        "vf_coef": vf_coef,
-        "policy_kwargs": dict(
-            net_arch=net_arch,
-            activation_fn=activation_fn,
-            ortho_init=ortho_init,
-        ),
+        "batch_size": batch_size,
+        "buffer_size": buffer_size,
+        "train_freq": train_freq,
+        "gradient_steps": gradient_steps,
+        "policy_kwargs": dict(net_arch=net_arch),
     }
+
+    if noise_type == "normal":
+        hyperparams["action_noise"] = NormalActionNoise(
+            mean=np.zeros(n_actions), sigma=noise_std * np.ones(n_actions)
+        )
+    elif noise_type == "ornstein-uhlenbeck":
+        hyperparams["action_noise"] = OrnsteinUhlenbeckActionNoise(
+            mean=np.zeros(n_actions), sigma=noise_std * np.ones(n_actions)
+        )
+
+    return hyperparams
 
 class TrialEvalCallback(EvalCallback):
     """Callback used for evaluating and reporting a trial."""
@@ -147,25 +123,21 @@ class TrialEvalCallback(EvalCallback):
 def objective(trial: optuna.Trial) -> float:
 
     kwargs = DEFAULT_HYPERPARAMS.copy()
-    # Sample hyperparameters.
-    kwargs.update(sample_ppo_params(trial))
-    # Create the RL model.
-    model = PPO(**kwargs)
-    # Create env used for evaluation.
     eval_env = Monitor(gym.make(ENV_ID))
-    # Create the callback that will periodically evaluate and report the performance.
+    n_actions =  eval_env.action_space.shape[0]
 
-    stop_max_reward = StopTrainingOnRewardThreshold(reward_threshold=300, verbose=1)
-    stop_no_improve = StopTrainingOnNoModelImprovement(max_no_improvement_evals=30, min_evals=50, verbose=1)
+    # Sample hyperparameters.
+    kwargs.update(sample_ddpg_params(trial, n_actions))
+    # Create the RL model.
+    model = DDPG(**kwargs)
     
+    # Create the callback that will periodically evaluate and report the performance.
     eval_callback = TrialEvalCallback(eval_env, 
                                       trial,
                                       n_eval_episodes=N_EVAL_EPISODES, 
                                       eval_freq=EVAL_FREQ, 
                                       deterministic=True,
-                                      verbose=1,
-                                      #callback_on_new_best=stop_max_reward,
-                                      #callback_after_eval=stop_no_improve
+                                      verbose=1
     )
 
     nan_encountered = False
@@ -204,7 +176,7 @@ if __name__ == "__main__":
 
     # Make Optuna study re-runnable
     study = optuna.create_study(storage=storage,
-                                study_name='bipedal_v3_normal_ppo',
+                                study_name='bipedal_v3_normal_ddpg',
                                 sampler=sampler, 
                                 pruner=pruner, 
                                 load_if_exists=True,
@@ -231,10 +203,6 @@ if __name__ == "__main__":
 
     print("  Params: ")
     for key, value in trial.params.items():
-        print("    {}: {}".format(key, value))
-
-    print("  User attrs:")
-    for key, value in trial.user_attrs.items():
         print("    {}: {}".format(key, value))
 
     try:
