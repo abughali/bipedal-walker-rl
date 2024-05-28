@@ -11,7 +11,7 @@ model_path = os.path.join('training', 'saved_models', 'PPO_BipedalWalker_Normal_
 model = ALGO.load(model_path)
 
 # Create a directory for saving videos
-video_folder = "videos/ppo/nondet"
+video_folder = "videos/ppo"
 os.makedirs(video_folder, exist_ok=True)
 
 # Create the evaluation environment wrapped with VecVideoRecorder to record episode
@@ -31,6 +31,7 @@ while not done:
     obs, reward, done, info = eval_env.step(action)
     total_reward += reward
 
-print(f"Total reward for the recorded episode: {total_reward}")    
+print(f"Total reward for the recorded episode: {total_reward}")
+
 # Close the environment to save the video
 eval_env.close()

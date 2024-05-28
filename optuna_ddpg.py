@@ -1,22 +1,23 @@
+import os
 import warnings
-
-# Suppress AVX2 warning
-warnings.filterwarnings("ignore", message="Your system is avx2 capable but pygame was not built with support for it")
-
 from typing import Optional
+
 import gymnasium as gym
+import numpy as np
 import optuna
 import optuna.visualization as vis
+import torch
 from optuna.pruners import MedianPruner
 from optuna.samplers import TPESampler
 from stable_baselines3.ddpg import DDPG
 from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
 from stable_baselines3.common.monitor import Monitor
-import torch
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
-import os
-import numpy as np
 
+# Suppress AVX2 warning
+warnings.filterwarnings("ignore", message="Your system is avx2 capable but pygame was not built with support for it")
+
+# Hyperparameters and environment configuration
 N_TRIALS = 8
 N_STARTUP_TRIALS = 5
 N_EVALUATIONS = 150
@@ -25,37 +26,32 @@ EVAL_FREQ = N_TIMESTEPS // N_EVALUATIONS
 N_EVAL_EPISODES = 5
 N_JOBS = 8
 STUDY_PATH = "optuna/study/ddpg"
-
 ENV_ID = "BipedalWalker-v3"
 
+# Default hyperparameters
 DEFAULT_HYPERPARAMS = {
     "policy": "MlpPolicy",
     "env": ENV_ID,
 }
 
+#Linear learning rate schedule.
 def linear_schedule(initial_value):
-
     def func(progress_remaining):
-
         return progress_remaining * initial_value
-
     return func
 
-# Function to sample hyperparameters
+#Function to sample DDPG hyperparameters.
 def sample_ddpg_params(trial, n_actions):
 
     gamma = trial.suggest_float('gamma', 0.9, 0.9999, log=True)
     learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     batch_size = trial.suggest_categorical("batch_size", [16, 32, 64, 100, 128, 256, 512])
     buffer_size = trial.suggest_categorical("buffer_size", [int(1e4), int(1e5), int(1e6)])
-    # Polyak coeff
     tau = trial.suggest_categorical("tau", [0.001, 0.005, 0.01, 0.02, 0.05, 0.08])
     train_freq = trial.suggest_categorical("train_freq", [1, 4, 8, 16, 32, 64, 128])
     gradient_steps = train_freq
-
-    noise_type = trial.suggest_categorical( "noise_type", ["ornstein-uhlenbeck", "normal", None])
-    noise_std = trial.suggest_float("noise_std", 0, 1, )
-
+    noise_type = trial.suggest_categorical("noise_type", ["ornstein-uhlenbeck", "normal", None])
+    noise_std = trial.suggest_float("noise_std", 0, 1)
     net_arch_type = trial.suggest_categorical("net_arch", ["small", "medium", "big"])
     net_arch = {"small": [64, 64], "medium": [256, 256], "big": [512, 512]}[net_arch_type]
 
@@ -81,8 +77,8 @@ def sample_ddpg_params(trial, n_actions):
 
     return hyperparams
 
+#Callback used for evaluating and reporting a trial.
 class TrialEvalCallback(EvalCallback):
-    """Callback used for evaluating and reporting a trial."""
 
     def __init__(
         self,
@@ -92,7 +88,7 @@ class TrialEvalCallback(EvalCallback):
         eval_freq: int = 10000,
         deterministic: bool = True,
         verbose: int = 0,
-        callback_on_new_best : Optional[BaseCallback] = None,
+        callback_on_new_best: Optional[BaseCallback] = None,
         callback_after_eval: Optional[BaseCallback] = None
     ):
         super().__init__(
@@ -113,18 +109,18 @@ class TrialEvalCallback(EvalCallback):
             super()._on_step()
             self.eval_idx += 1
             self.trial.report(self.last_mean_reward, self.eval_idx)
-            # Prune trial if need.
             if self.trial.should_prune():
                 self.is_pruned = True
                 return False
         return True
 
-# Define the objective function for Optuna
+#Define the objective function for Optuna.
+
 def objective(trial: optuna.Trial) -> float:
 
     kwargs = DEFAULT_HYPERPARAMS.copy()
     eval_env = Monitor(gym.make(ENV_ID))
-    n_actions =  eval_env.action_space.shape[0]
+    n_actions = eval_env.action_space.shape[0]
 
     # Sample hyperparameters.
     kwargs.update(sample_ddpg_params(trial, n_actions))
@@ -164,7 +160,7 @@ def objective(trial: optuna.Trial) -> float:
 
 # Optimize hyperparameters using Optuna
 if __name__ == "__main__":
-    # Set pytorch num threads to 1 for faster training.
+    # Control pytorch num threads for faster training.
     torch.set_num_threads(N_JOBS)
 
     sampler = TPESampler(n_startup_trials=N_STARTUP_TRIALS)
@@ -193,7 +189,7 @@ if __name__ == "__main__":
 
     os.makedirs(STUDY_PATH, exist_ok=True)
 
-    # In addition to embdded sql-lite db, save in csv
+    # In addition to embedded sql-lite db, save in csv
     study.trials_dataframe().to_csv(f"{STUDY_PATH}/report.csv")
 
     print("Best trial:")
@@ -206,11 +202,12 @@ if __name__ == "__main__":
         print("    {}: {}".format(key, value))
 
     try:
-        # 3 browser windows will be open
+
         fig1 = vis.plot_optimization_history(study)
         fig2 = vis.plot_param_importances(study)
         fig3 = vis.plot_parallel_coordinate(study)
 
+        # 3 browser windows will be open
         fig1.show()
         fig2.show()
         fig3.show()
