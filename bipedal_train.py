@@ -42,7 +42,7 @@ print(env.observation_space.sample())
 
 # Random actions
 # Run n episode(s)
-episodes = 0
+episodes = 5
 for episode in range(1, episodes + 1):
     state = env.reset()
     done = False
@@ -84,7 +84,7 @@ eval_callback = EvalCallback(
     verbose=1
 )
 
-# Create the PPO model
+# Create the PPO model with default params
 model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_path)
 
 # Train the PPO model

@@ -5,4 +5,5 @@ wandb/*
 models/*
 ./vscode/*
 .DS_Store
-
+optuna/*
+training/logs/*

@@ -3,11 +3,14 @@ from stable_baselines3 import PPO
 from stable_baselines3.ddpg import DDPG
 from stable_baselines3.common.vec_env import VecVideoRecorder
 from stable_baselines3.common.env_util import make_vec_env
+# Suppress AVX2 warning
+import warnings
+warnings.filterwarnings("ignore", message="Your system is avx2 capable but pygame was not built with support for it")
 
 environment_name = "BipedalWalker-v3"
 ALGO = PPO # DDPG
 
-model_path = os.path.join('training', 'saved_models', 'PPO_BipedalWalker_Normal_Det')
+model_path = os.path.join('training', 'saved_models', 'PPO_BipedalWalker_V3')
 model = ALGO.load(model_path)
 
 # Create a directory for saving videos

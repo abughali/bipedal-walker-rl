@@ -18,7 +18,7 @@ import warnings
 warnings.filterwarnings("ignore", message="Your system is avx2 capable but pygame was not built with support for it")
 
 # Hyperparameters and environment configuration
-N_TRIALS = 8
+N_TRIALS = 100
 N_STARTUP_TRIALS = 5
 N_EVALUATIONS = 150
 N_TIMESTEPS = 150_000

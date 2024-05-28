@@ -20,15 +20,15 @@ environment_name = "BipedalWalker-v3"
 config = {
     'policy': 'MlpPolicy',
     'n_steps': 2048, 
-    'batch_size': 64, 
-    'gamma': 0.9606344595370512, 
-    'learning_rate': 0.0004803031415590949, 
-    'ent_coef': 5.2492091292781885e-06, 
-    'clip_range': 0.19171786835210225, 
-    'n_epochs': 2, 
-    'gae_lambda': 0.8571941809479062, 
-    'max_grad_norm': 2.372533951435877, 
-    'vf_coef': 0.39445800472492965
+    'batch_size': 32, 
+    'gamma': 0.96, 
+    'learning_rate': 0.00048, 
+    'ent_coef': 0.0000004, 
+    'clip_range': 0.191, 
+    'n_epochs': 3, 
+    'gae_lambda': 0.857, 
+    'max_grad_norm': 2.372, 
+    'vf_coef': 0.394
 }
 
 # Initialize Weights and Biases (wandb) for experiment tracking
