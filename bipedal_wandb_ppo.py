@@ -72,6 +72,7 @@ callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=300, verbose=1
 # Evaluation callback to periodically evaluate and save the best model
 eval_callback = EvalCallback(
     env, 
+    #callback_on_new_best=callback_on_best, 
     eval_freq=2000,
     deterministic=True, 
     best_model_save_path='./logs/', 
